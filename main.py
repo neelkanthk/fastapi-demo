@@ -1,86 +1,85 @@
 from fastapi import FastAPI, status
 from pydantic import BaseModel
 from fastapi.responses import JSONResponse
+import psycopg2
+from psycopg2.extras import RealDictCursor
+import logging
+from typing import Optional
 
 app = FastAPI()
+logger = logging.getLogger("uvicorn.error")
+# while True:
+try:
+    dbconn = psycopg2.connect(host="localhost", database="db_fastapi", user="postgres",
+                              password="postgres", cursor_factory=RealDictCursor)
+    cursor = dbconn.cursor()
+    logger.info("Database connection successful.")
+
+except Exception as e:
+    logger.error("Connecting to database failed.")
 
 
-@app.get('/')
+@app.get('/', status_code=status.HTTP_200_OK)
 def read_root():
     return JSONResponse(content="Posts API", status_code=status.HTTP_200_OK)
 
 
-class Post:
-    id: int
-    title: str
-    description: str
-    author: str
-
-    def __init__(self, title: str, description: str, author: str):
-        self.id = int(posts[-1].id) + 1 if len(posts) > 0 else 1
-        self.title = title
-        self.description = description
-        self.author = author
-
-
-posts = list()
-
-
-@app.get('/posts')
+@app.get('/posts', status_code=status.HTTP_200_OK)
 def index():
-    return posts
+    cursor.execute(""" SELECT * FROM posts """)
+    posts = cursor.fetchall()
+    return {"data": posts}
 
 
 class NewPostRequest(BaseModel):
     title: str
-    description: str
+    content: str
     author: str
+    published: Optional[bool] = True
 
 
-@app.post('/posts')
+@app.post('/posts', status_code=status.HTTP_201_CREATED)
 def save(payload: NewPostRequest):
-    post = Post(payload.title, payload.description, payload.author)
-    posts.append(post)
-    return post
+    cursor.execute("""
+        INSERT INTO posts (title, content, author, published) VALUES (%s, %s, %s, %s) RETURNING * """, (payload.title, payload.content, payload.author, payload.published))
+    new_post = cursor.fetchone()
+    dbconn.commit()
+    return {"data": new_post}
 
 
-@app.get('/posts/{id}')
+@app.get('/posts/{id}', status_code=status.HTTP_200_OK)
 def show(id: int):
-    for post in posts:
-        if post.id == id:
-            return post
-    return JSONResponse(
-        content={},
-        status_code=status.HTTP_404_NOT_FOUND
-    )
+    query = """ SELECT * FROM posts WHERE id = %s """
+    cursor.execute(query, (id,))
+    post = cursor.fetchone()
+    return {"data": post}
 
 
 @app.delete('/posts/{id}')
 def delete(id: int):
-    for index, post in enumerate(posts):
-        if post.id == id:
-            posts.pop(index)
-            return JSONResponse(
-                content=f"Post {id} has been deleted.",
-                status_code=status.HTTP_204_NO_CONTENT
-            )
-    return JSONResponse(
-        content=None,
-        status_code=status.HTTP_404_NOT_FOUND
-    )
+    if post_exists(id):
+        query = """ DELETE FROM posts WHERE id = %s """
+        cursor.execute(query, (id,))
+        dbconn.commit()
+        return {"data": f"Post {id} has been deleted."}
+    else:
+        return JSONResponse(content=f"Post {id} not found.", status_code=status.HTTP_404_NOT_FOUND)
 
 
 @app.put('/posts/{id}')
 def update(id: int, payload: NewPostRequest):
-    for index, post in enumerate(posts):
-        if post.id == id:
-            post.title = payload.title
-            post.description = payload.description
-            post.author = payload.author
-            posts[index] = post
-            return JSONResponse(content=f"Post {id} has been updated.", status_code=status.HTTP_200_OK)
+    if post_exists:
+        cursor.execute(""" UPDATE posts SET title = %s, content = %s, author = %s, published = %s, updated_at = NOW() WHERE id = %s RETURNING *""",
+                       (payload.title, payload.content, payload.author, payload.published, id,))
+        updated_post = cursor.fetchone()
+        dbconn.commit()
+        return {"data": updated_post}
+    else:
+        return JSONResponse(content=f"Post {id} not found.", status_code=status.HTTP_404_NOT_FOUND)
 
-    return JSONResponse(
-        content=None,
-        status_code=status.HTTP_404_NOT_FOUND
-    )
+
+def post_exists(id: int):
+    query = """ SELECT COUNT(*) FROM posts where id = %s"""
+    cursor.execute(query, (id,))
+    result = cursor.fetchone()
+    return True if result['count'] == 1 else False
