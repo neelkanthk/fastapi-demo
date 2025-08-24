@@ -1,14 +1,20 @@
-from fastapi import FastAPI, status
+from fastapi import FastAPI, status, Depends
 from pydantic import BaseModel
 from fastapi.responses import JSONResponse
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import logging
 from typing import Optional
+import models
+import database
+from sqlalchemy.orm import Session
 
 app = FastAPI()
 logger = logging.getLogger("uvicorn.error")
-# while True:
+
+# Create DB tables if not exist
+models.Base.metadata.create_all(bind=database.engine)
+
 try:
     dbconn = psycopg2.connect(host="localhost", database="db_fastapi", user="postgres",
                               password="postgres", cursor_factory=RealDictCursor)
@@ -22,6 +28,11 @@ except Exception as e:
 @app.get('/', status_code=status.HTTP_200_OK)
 def read_root():
     return JSONResponse(content="Posts API", status_code=status.HTTP_200_OK)
+
+
+@app.get('/sqlalchemy')
+def test_posts(db: Session = Depends(database.get_db)):
+    return {"status": "success"}
 
 
 @app.get('/posts', status_code=status.HTTP_200_OK)
