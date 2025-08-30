@@ -1,4 +1,4 @@
-from fastapi import FastAPI, status, Depends
+from fastapi import FastAPI, status, Depends, HTTPException
 from pydantic import BaseModel
 from fastapi.responses import JSONResponse
 import psycopg2
@@ -15,15 +15,6 @@ logger = logging.getLogger("uvicorn.error")
 # Create DB tables if not exist
 models.Base.metadata.create_all(bind=database.engine)
 
-try:
-    dbconn = psycopg2.connect(host="localhost", database="db_fastapi", user="postgres",
-                              password="postgres", cursor_factory=RealDictCursor)
-    cursor = dbconn.cursor()
-    logger.info("Database connection successful.")
-
-except Exception as e:
-    logger.error("Connecting to database failed.")
-
 
 @app.get('/', status_code=status.HTTP_200_OK)
 def read_root():
@@ -36,9 +27,9 @@ def test_posts(db: Session = Depends(database.get_db)):
 
 
 @app.get('/posts', status_code=status.HTTP_200_OK)
-def index():
-    cursor.execute(""" SELECT * FROM posts """)
-    posts = cursor.fetchall()
+def index(db: Session = Depends(database.get_db)):
+    posts = db.query(models.Post).all()
+
     return {"data": posts}
 
 
@@ -50,47 +41,46 @@ class NewPostRequest(BaseModel):
 
 
 @app.post('/posts', status_code=status.HTTP_201_CREATED)
-def save(payload: NewPostRequest):
-    cursor.execute("""
-        INSERT INTO posts (title, content, author, published) VALUES (%s, %s, %s, %s) RETURNING * """, (payload.title, payload.content, payload.author, payload.published))
-    new_post = cursor.fetchone()
-    dbconn.commit()
+def save(payload: NewPostRequest, db: Session = Depends(database.get_db)):
+    data = payload.model_dump()
+    new_post = models.Post(**data)
+    db.add(new_post)
+    db.commit()
+    db.refresh(new_post)
     return {"data": new_post}
 
 
 @app.get('/posts/{id}', status_code=status.HTTP_200_OK)
-def show(id: int):
-    query = """ SELECT * FROM posts WHERE id = %s """
-    cursor.execute(query, (id,))
-    post = cursor.fetchone()
-    return {"data": post}
-
-
-@app.delete('/posts/{id}')
-def delete(id: int):
-    if post_exists(id):
-        query = """ DELETE FROM posts WHERE id = %s """
-        cursor.execute(query, (id,))
-        dbconn.commit()
-        return {"data": f"Post {id} has been deleted."}
+def show(id: int, db: Session = Depends(database.get_db)):
+    data = db.query(models.Post).filter(models.Post.id == id).first()
+    if not data:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Post {id} not found.")
     else:
-        return JSONResponse(content=f"Post {id} not found.", status_code=status.HTTP_404_NOT_FOUND)
+        return {"data": data}
 
 
-@app.put('/posts/{id}')
-def update(id: int, payload: NewPostRequest):
-    if post_exists:
-        cursor.execute(""" UPDATE posts SET title = %s, content = %s, author = %s, published = %s, updated_at = NOW() WHERE id = %s RETURNING *""",
-                       (payload.title, payload.content, payload.author, payload.published, id,))
-        updated_post = cursor.fetchone()
-        dbconn.commit()
-        return {"data": updated_post}
+@app.delete('/posts/{id}', status_code=status.HTTP_204_NO_CONTENT)
+def delete(id: int, db: Session = Depends(database.get_db)):
+    data = db.query(models.Post).filter(models.Post.id == id)
+    if data.first() is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Post id {id} not found.")
     else:
-        return JSONResponse(content=f"Post {id} not found.", status_code=status.HTTP_404_NOT_FOUND)
+        data.delete()
+        db.commit()
 
 
-def post_exists(id: int):
-    query = """ SELECT COUNT(*) FROM posts where id = %s"""
-    cursor.execute(query, (id,))
-    result = cursor.fetchone()
-    return True if result['count'] == 1 else False
+@app.put('/posts/{id}', status_code=status.HTTP_200_OK)
+def update(id: int, payload: NewPostRequest, db: Session = Depends(database.get_db)):
+    post = db.query(models.Post).filter(models.Post.id == id)
+    if post.first() is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Post id {id} not found.")
+    else:
+        post.update(payload.model_dump())
+        db.commit()
+        return {"data": post.first()}
+
+
+def post_exists(id: int, db: Session = Depends(database.get_db)):
+    post = db.query(models.Post).filter(models.Post.id == id).first()
+    exists = False if post is None else True
+    return exists

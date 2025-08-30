@@ -10,5 +10,5 @@ class Post(Base):
     content = Column(TEXT, nullable=False)
     author = Column(VARCHAR, nullable=False)
     published = Column(BOOLEAN, nullable=True)
-    created_at = Column(TIMESTAMP, nullable=False)
+    created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default="now()")
     updated_at = Column(TIMESTAMP, nullable=True)
