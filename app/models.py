@@ -1,4 +1,4 @@
-from database import Base
+from .database import Base
 from sqlalchemy import Column, INTEGER, VARCHAR, TEXT, BOOLEAN, TIMESTAMP
 
 
@@ -12,3 +12,12 @@ class Post(Base):
     published = Column(BOOLEAN, nullable=True)
     created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default="now()")
     updated_at = Column(TIMESTAMP, nullable=True)
+
+
+class User(Base):
+    __tablename__ = 'users'
+
+    id = Column(INTEGER, primary_key=True, nullable=False)
+    email = Column(VARCHAR, nullable=False, unique=True)
+    password = Column(VARCHAR, nullable=False)
+    created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default='now()')

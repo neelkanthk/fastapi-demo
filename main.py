@@ -1,13 +1,14 @@
 from fastapi import FastAPI, status, Depends, HTTPException
-from pydantic import BaseModel
+
 from fastapi.responses import JSONResponse
-import psycopg2
-from psycopg2.extras import RealDictCursor
 import logging
-from typing import Optional
-import models
-import database
+from app.schemas.requests import PostCreateRequest, PostUpdateRequest, UserRegisterRequest
+from app.schemas.responses import PostResponse, UserResponse
+import app.models as models
+import app.database as database
 from sqlalchemy.orm import Session
+from typing import List
+from passlib.context import CryptContext
 
 app = FastAPI()
 logger = logging.getLogger("uvicorn.error")
@@ -21,33 +22,21 @@ def read_root():
     return JSONResponse(content="Posts API", status_code=status.HTTP_200_OK)
 
 
-@app.get('/sqlalchemy')
-def test_posts(db: Session = Depends(database.get_db)):
-    return {"status": "success"}
-
-
-@app.get('/posts', status_code=status.HTTP_200_OK)
+@app.get('/posts', status_code=status.HTTP_200_OK, response_model=List[PostResponse])
 def index(db: Session = Depends(database.get_db)):
-    posts = db.query(models.Post).all()
+    posts = db.query(models.Post).filter(models.Post.published == True).all()
 
-    return {"data": posts}
-
-
-class NewPostRequest(BaseModel):
-    title: str
-    content: str
-    author: str
-    published: Optional[bool] = True
+    return posts
 
 
-@app.post('/posts', status_code=status.HTTP_201_CREATED)
-def save(payload: NewPostRequest, db: Session = Depends(database.get_db)):
+@app.post('/posts', status_code=status.HTTP_201_CREATED, response_model=PostResponse)
+def store(payload: PostCreateRequest, db: Session = Depends(database.get_db)):
     data = payload.model_dump()
     new_post = models.Post(**data)
     db.add(new_post)
     db.commit()
     db.refresh(new_post)
-    return {"data": new_post}
+    return new_post
 
 
 @app.get('/posts/{id}', status_code=status.HTTP_200_OK)
@@ -70,8 +59,8 @@ def delete(id: int, db: Session = Depends(database.get_db)):
 
 
 @app.put('/posts/{id}', status_code=status.HTTP_200_OK)
-def update(id: int, payload: NewPostRequest, db: Session = Depends(database.get_db)):
-    post = db.query(models.Post).filter(models.Post.id == id)
+def update(id: int, payload: PostUpdateRequest, db: Session = Depends(database.get_db)):
+    post = db.query(post.Post).filter(post.Post.id == id)
     if post.first() is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Post id {id} not found.")
     else:
@@ -81,6 +70,25 @@ def update(id: int, payload: NewPostRequest, db: Session = Depends(database.get_
 
 
 def post_exists(id: int, db: Session = Depends(database.get_db)):
-    post = db.query(models.Post).filter(models.Post.id == id).first()
+    post = db.query(post.Post).filter(post.Post.id == id).first()
     exists = False if post is None else True
     return exists
+
+
+@app.post('/register', status_code=status.HTTP_201_CREATED, response_model=UserResponse)
+def store_user(payload: UserRegisterRequest, db: Session = Depends(database.get_db)):
+    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+    hashed_pwd = pwd_context.hash(payload.password)
+    payload.password = hashed_pwd
+    data = payload.model_dump()
+    user = models.User(**data)
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+@app.get('/users/{id}', status_code=status.HTTP_200_OK, response_class=UserResponse)
+def get_user(id: int, db: Session = Depends(database.get_db)):
+    user = db.query(models.User).get(id)
+    return user
