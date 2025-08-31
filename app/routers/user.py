@@ -1,19 +1,16 @@
-from app import models, database
+from app import models, database, utils
 from app.schemas.requests import UserRegisterRequest
 from app.schemas.responses import UserResponse
 from sqlalchemy.orm import Session
 from typing import List
 from fastapi import status, Depends, APIRouter, HTTPException
-from passlib.context import CryptContext
 
-router = APIRouter()
+router = APIRouter(prefix="/users", tags=["Users"])
 
 
-@router.post('/users/register', status_code=status.HTTP_201_CREATED, response_model=UserResponse)
+@router.post('/register', status_code=status.HTTP_201_CREATED, response_model=UserResponse)
 def store_user(payload: UserRegisterRequest, db: Session = Depends(database.get_db)):
-    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-    hashed_pwd = pwd_context.hash(payload.password)
-    payload.password = hashed_pwd
+    payload.password = utils.hash_password(payload.password)
     data = payload.model_dump()
     user = models.User(**data)
     db.add(user)
@@ -26,7 +23,9 @@ def store_user(payload: UserRegisterRequest, db: Session = Depends(database.get_
     return user
 
 
-@router.get('/users/{id}', status_code=status.HTTP_200_OK, response_class=UserResponse)
+@router.get('/{id}', status_code=status.HTTP_200_OK, response_model=UserResponse)
 def get_user(id: int, db: Session = Depends(database.get_db)):
     user = db.query(models.User).get(id)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"User id {id} not found.")
     return user

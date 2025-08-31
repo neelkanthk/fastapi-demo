@@ -5,17 +5,17 @@ from sqlalchemy.orm import Session
 from typing import List
 from fastapi import status, Depends, HTTPException, APIRouter
 
-router = APIRouter()
+router = APIRouter(prefix="/posts", tags=["Posts"])
 
 
-@router.get('/posts', status_code=status.HTTP_200_OK, response_model=List[PostResponse])
+@router.get('/', status_code=status.HTTP_200_OK, response_model=List[PostResponse])
 def index(db: Session = Depends(database.get_db)):
     posts = db.query(models.Post).filter(models.Post.published == True).all()
 
     return posts
 
 
-@router.post('/posts', status_code=status.HTTP_201_CREATED, response_model=PostResponse)
+@router.post('/', status_code=status.HTTP_201_CREATED, response_model=PostResponse)
 def store(payload: PostCreateRequest, db: Session = Depends(database.get_db)):
     data = payload.model_dump()
     new_post = models.Post(**data)
@@ -29,7 +29,7 @@ def store(payload: PostCreateRequest, db: Session = Depends(database.get_db)):
     return new_post
 
 
-@router.get('/posts/{id}', status_code=status.HTTP_200_OK)
+@router.get('/{id}', status_code=status.HTTP_200_OK)
 def show(id: int, db: Session = Depends(database.get_db)):
     data = db.query(models.Post).filter(models.Post.id == id).first()
     if not data:
@@ -38,7 +38,7 @@ def show(id: int, db: Session = Depends(database.get_db)):
         return {"data": data}
 
 
-@router.delete('/posts/{id}', status_code=status.HTTP_204_NO_CONTENT)
+@router.delete('/{id}', status_code=status.HTTP_204_NO_CONTENT)
 def delete(id: int, db: Session = Depends(database.get_db)):
     data = db.query(models.Post).filter(models.Post.id == id)
     if data.first() is None:
@@ -48,7 +48,7 @@ def delete(id: int, db: Session = Depends(database.get_db)):
         db.commit()
 
 
-@router.put('/posts/{id}', status_code=status.HTTP_200_OK)
+@router.put('/{id}', status_code=status.HTTP_200_OK)
 def update(id: int, payload: PostUpdateRequest, db: Session = Depends(database.get_db)):
     post = db.query(post.Post).filter(post.Post.id == id)
     if post.first() is None:
