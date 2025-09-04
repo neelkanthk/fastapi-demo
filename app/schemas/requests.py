@@ -5,14 +5,12 @@ from typing import Optional
 class PostCreateRequest(BaseModel):
     title: str
     content: str
-    author: str
     published: Optional[bool] = True
 
 
 class PostUpdateRequest (BaseModel):
     title: str
     content: str
-    author: str
     published: Optional[bool] = True
 
 
