@@ -1,7 +1,6 @@
 from app import models, database
-from app.schemas.requests import PostCreateRequest, PostUpdateRequest
+from app.schemas.requests import PostCreateRequest, PostUpdateRequest, VoteRequest
 from app.schemas.responses import PostResponse
-from app.schemas.auth import TokenData
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from fastapi import status, Depends, HTTPException, APIRouter

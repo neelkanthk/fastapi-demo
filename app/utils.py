@@ -8,6 +8,7 @@ from app.schemas.auth import TokenData
 from fastapi.security import OAuth2PasswordBearer
 from app import models, database
 from sqlalchemy.orm import Session
+import os
 
 
 def hash_password(pwd: str):
@@ -23,9 +24,9 @@ def verify_password(plain_pwd, hashed_pwd):
 
 # to get a string like this run:
 # openssl rand -hex 32
-SECRET_KEY = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+SECRET_KEY = os.getenv("OAUTH2_SECRET_KEY", "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7")
+ALGORITHM = os.getenv("OAUTH2_ALGORITHM", "HS256")
+ACCESS_TOKEN_EXPIRE_MINUTES = os.getenv("OAUTH2_ACCESS_TOKEN_EXPIRE_MINUTES", 30)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 
