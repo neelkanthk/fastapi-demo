@@ -17,3 +17,8 @@ class PostUpdateRequest (BaseModel):
 class UserRegisterRequest(BaseModel):
     email: EmailStr
     password: str
+
+
+class VoteRequest(BaseModel):
+    post_id: int
+    direction: int

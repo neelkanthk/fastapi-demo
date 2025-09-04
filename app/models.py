@@ -24,3 +24,10 @@ class User(Base):
     email = Column(VARCHAR, nullable=False, unique=True)
     password = Column(VARCHAR, nullable=False)
     created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default='now()')
+
+
+class Vote(Base):
+    __tablename__ = "votes"
+
+    post_id = Column(INTEGER, ForeignKey("posts.id"), primary_key=True)
+    user_id = Column(INTEGER, ForeignKey("users.id"), primary_key=True)
