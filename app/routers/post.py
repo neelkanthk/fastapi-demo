@@ -3,7 +3,7 @@ from app.schemas.requests import PostCreateRequest, PostUpdateRequest
 from app.schemas.responses import PostResponse
 from app.schemas.auth import TokenData
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from fastapi import status, Depends, HTTPException, APIRouter
 import app.utils as utils
 from datetime import datetime, timezone
@@ -12,8 +12,8 @@ router = APIRouter(prefix="/posts", tags=["Posts"])
 
 
 @router.get('/', status_code=status.HTTP_200_OK, response_model=List[PostResponse])
-def index(db: Session = Depends(database.get_db)):
-    posts = db.query(models.Post).filter(models.Post.published == True).all()
+def index(db: Session = Depends(database.get_db), published: bool = True, limit: int = 10):
+    posts = db.query(models.Post).filter(models.Post.published == published).limit(limit).all()
 
     return posts
 
@@ -31,6 +31,15 @@ def store(payload: PostCreateRequest, db: Session = Depends(database.get_db), lo
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Error creating post.")
     db.refresh(new_post)
     return new_post
+
+
+@router.get('/search', response_model=List[PostResponse], status_code=status.HTTP_200_OK)
+def search(db: Session = Depends(database.get_db), keyword: Optional[str] = ""):
+    query = db.query(models.Post).filter(models.Post.title.contains(
+        keyword)).filter(models.Post.published == True)
+
+    print(query)
+    return query.all()
 
 
 @router.get('/{id}', status_code=status.HTTP_200_OK, response_model=PostResponse)

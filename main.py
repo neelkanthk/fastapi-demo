@@ -7,6 +7,7 @@ import app.database as database
 from app.routers.post import router as post_router
 from app.routers.user import router as user_router
 from app.routers.auth import router as auth_router
+from datetime import datetime, timezone
 
 app = FastAPI()
 app.include_router(post_router)
@@ -20,4 +21,7 @@ models.Base.metadata.create_all(bind=database.engine)
 
 @app.get('/', status_code=status.HTTP_200_OK)
 def read_root():
-    return JSONResponse(content="My Fast API", status_code=status.HTTP_200_OK)
+    return JSONResponse(content={
+        "message": "Welcome to FastAPI",
+        "time": datetime.now().isoformat()
+    }, status_code=status.HTTP_200_OK)
