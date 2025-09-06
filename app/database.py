@@ -1,10 +1,10 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 import os
-
+from app.config import driver, host, username, password, port, database_name
 
 # Database URL from environment variable or default to local PostgreSQL
-SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/db_fastapi")
+SQLALCHEMY_DATABASE_URL = f"{driver}://{username}:{password}@{host}:{port}/{database_name}"
 
 # Create SQLAlchemy engine to connect to pgsql
 engine = create_engine(SQLALCHEMY_DATABASE_URL)

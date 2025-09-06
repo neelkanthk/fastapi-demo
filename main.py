@@ -17,8 +17,8 @@ app.include_router(auth_router)
 app.include_router(vote_router)
 logger = logging.getLogger("uvicorn.error")
 
-# Create DB tables if not exist
-models.Base.metadata.create_all(bind=database.engine)
+# Create DB tables if not exist - Not needed when using Alembic migrations
+# models.Base.metadata.create_all(bind=database.engine)
 
 
 @app.get('/', status_code=status.HTTP_200_OK)
