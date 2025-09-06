@@ -24,7 +24,7 @@ models.Base.metadata.create_all(bind=database.engine)
 @app.get('/', status_code=status.HTTP_200_OK)
 def read_root():
     return JSONResponse(content={
-        "message": "Welcome to FastAPI",
+        "message": "Welcome to FastAPI Posts API Service !",
         "time": datetime.now().isoformat(),
         "database": "Connected" if database.get_db else "Not Connected"
     }, status_code=status.HTTP_200_OK)
