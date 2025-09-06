@@ -6,15 +6,22 @@ from typing import List, Optional
 from fastapi import status, Depends, HTTPException, APIRouter
 import app.utils as utils
 from datetime import datetime, timezone
+from sqlalchemy import func
 
 router = APIRouter(prefix="/posts", tags=["Posts"])
 
 
 @router.get('/', status_code=status.HTTP_200_OK, response_model=List[PostResponse])
 def index(db: Session = Depends(database.get_db), published: bool = True, limit: int = 10):
-    posts = db.query(models.Post).filter(models.Post.published == published).limit(limit).all()
 
-    return posts
+    posts = db.query(models.Post).join(models.Vote, models.Vote.post_id == models.Post.id, isouter=True).add_column(
+        func.count(models.Vote.post_id).label("vote_count")).group_by(models.Post.id).filter(models.Post.published == published).limit(limit).all()
+    results = []
+    for i, post in enumerate(posts):
+        results.append(post[0])
+        results[i].vote_count = post[1]
+
+    return results
 
 
 @router.post('/', status_code=status.HTTP_201_CREATED, response_model=PostResponse)
@@ -43,10 +50,14 @@ def search(db: Session = Depends(database.get_db), keyword: Optional[str] = ""):
 
 @router.get('/{id}', status_code=status.HTTP_200_OK, response_model=PostResponse)
 def show(id: int, db: Session = Depends(database.get_db)):
-    data = db.query(models.Post).filter(models.Post.id == id).first()
-    if not data:
+    post = db.query(models.Post).join(models.Vote, models.Post.id == models.Vote.post_id, isouter=True).add_column(
+        func.count(models.Vote.post_id).label('vote_count')).group_by(models.Post.id).filter(models.Post.id == id).first()
+
+    if not post:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Post {id} not found.")
     else:
+        data = post[0]
+        data.vote_count = post[1]
         return data
 
 
