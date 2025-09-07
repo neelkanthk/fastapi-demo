@@ -18,7 +18,7 @@ services:
       OAUTH2_ACCESS_TOKEN_EXPIRE_MINUTES: 30
     volumes:
       - .:/app:ro # Mount the current directory to /app in the container (read-only for security) so that we do not need to run docker build again and again
-    command: uvicorn main:app --host=0.0.0.0 --port=8000 --reload # Command to run the FastAPI app with auto-reload enabled
+    command: uvicorn main:app --host=0.0.0.0 --port=8000 --reload # Command to run the FastAPI app with auto-reload enabled for development
   db:
     image: postgres:15 # Use the official PostgreSQL image
     environment: # Set environment variables for PostgreSQL
