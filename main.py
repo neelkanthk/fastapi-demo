@@ -34,7 +34,7 @@ logger = logging.getLogger("uvicorn.error")
 @app.get('/', status_code=status.HTTP_200_OK)
 def read_root():
     return JSONResponse(content={
-        "message": "Welcome to FastAPI Posts API Service !",
+        "message": "Welcome to FastAPI Posts API Service in Docker!",
         "time": datetime.now().isoformat(),
         "database": "Connected" if database.get_db else "Not Connected"
     }, status_code=status.HTTP_200_OK)

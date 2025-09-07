@@ -1,14 +1,17 @@
 # Use an official Python image as the base
 FROM python:3.13-slim
 
-# Set working directory
+# Set the working directory inside the container
 WORKDIR /app
 
-# Copy requirements file and install dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Install uv
+RUN pip install uv
 
-# Copy the rest of your code
+# Copy requirements file and install dependenciess at WORKDIR
+COPY requirements.txt .
+RUN uv pip install --system -r requirements.txt
+
+# Copy the rest of your code into the container at WORKDIR
 COPY . .
 
 # Expose the port FastAPI runs on
