@@ -1,6 +1,7 @@
 from fastapi import FastAPI, status
 
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 import logging
 import app.models as models
 import app.database as database
@@ -11,6 +12,15 @@ from app.routers.vote import router as vote_router
 from datetime import datetime
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.include_router(post_router)
 app.include_router(user_router)
 app.include_router(auth_router)

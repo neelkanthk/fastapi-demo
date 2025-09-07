@@ -24,6 +24,7 @@ class User(Base):
     email = Column(VARCHAR, nullable=False, unique=True)
     password = Column(VARCHAR, nullable=False)
     created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default='now()')
+    updated_at = Column(TIMESTAMP(timezone=True), nullable=True)
 
 
 class Vote(Base):
